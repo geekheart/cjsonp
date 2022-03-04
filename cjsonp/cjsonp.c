@@ -63,8 +63,8 @@ end:
 
 char *cjsonp_search(const char *json, const char *path)
 {
-    cJSON *json_root;
-    cJSON *json_obj;
+    cJSON *json_root = NULL;
+    cJSON *json_obj = NULL;
     cjsonp_tok_t jsonp_tok;
     char res;
     char *ret;
@@ -96,9 +96,9 @@ end:
 
 char *cjsonp_delete(const char *json, const char *path)
 {
-    cJSON *json_root;
-    cJSON *json_parent;
-    cJSON *json_obj;
+    cJSON *json_root = NULL;
+    cJSON *json_parent = NULL;
+    cJSON *json_obj = NULL;
     cjsonp_tok_t jsonp_tok;
     char res;
     char *ret;
