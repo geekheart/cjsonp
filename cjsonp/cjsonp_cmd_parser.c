@@ -1,11 +1,11 @@
 #include "cjsonp_cmd_parser.h"
 
 #ifndef NULL
-    #ifdef __cplusplus
-        #define NULL 0
-    #else
-        #define NULL ((void *)0)
-    #endif
+#ifdef __cplusplus
+#define NULL 0
+#else
+#define NULL ((void *)0)
+#endif
 #endif
 
 static unsigned long _strlen(const char *str)
