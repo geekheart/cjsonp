@@ -7,7 +7,7 @@ dir:
 	mkdir -p build
 
 build/test.o: test.c
-	gcc -o $@ -c $^ -Icjsonp/include
+	gcc -o $@ -c $^ -Icjsonp/include -IcJSON
 
 build/cjsonp.o:  cjsonp/cjsonp.c
 	gcc -o $@ -c $^ -Icjsonp/include -IcJSON

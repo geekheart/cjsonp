@@ -21,41 +21,45 @@
 }
 */
 char json_text[150] = "{\"name\":\"Awesome 4K\",\"resolutions\":[{\"width\":1280,\"height\":720},{\"width\":1920,\"height\":1080},{\"width\":3840,\"height\":2160}]}";
+char* res;
 
 int main(void)
 {
-    char *res = cjsonp_search(json_text, "resolutions[0]width");
-    if (res != NULL)
-    {
-        printf("path: resolutions[0]width \nsearch: %s\n\n", res);
-    }
-    cjsonp_free(res);
+    cJSON *json_root = cJSON_Parse(json_text);
 
-    res = cjsonp_delete(json_text, "resolutions[0]width");
-    if (res != NULL)
+    cJSON *json_res = cjsonp_search(json_root, "resolutions[0]width");
+    if (json_res != NULL)
     {
+        printf("path: resolutions[0]width \nsearch: %d\n\n", json_res->valueint);
+    }
+
+    int ret = cjsonp_delete(json_root, "resolutions[0]width");
+    if (ret == 1)
+    {
+        res = cJSON_Print(json_root);
         printf("path: resolutions[0]width \ndelete: %s\n\n", res);
+        cJSON_free(res);
     }
-    cjsonp_free(res);
 
-    res = cjsonp_add(json_text, "resolutions[2]", "{\"width\":0, \"height\":0}");
-    if (res != NULL)
+    cJSON *json_add =  cJSON_Parse("{\"width\":0, \"height\":0}");
+    ret = cjsonp_add(json_root, "resolutions[2]", json_add);
+    if (ret == 1)
     {
+        res = cJSON_Print(json_root);
         printf("path: resolutions[2] \nadd: %s\n\n", res);
+        cJSON_free(res);
     }
-    cjsonp_free(res);
 
-    res = cjsonp_replace(json_text, "resolutions[0]width", "1200");
-    if (res != NULL)
+    cJSON *json_rep =  cJSON_Parse("1200");
+    ret = cjsonp_replace(json_root, "resolutions[1]width", json_rep);
+    if (ret == 1)
     {
+        res = cJSON_Print(json_root);
         printf("path: resolutions[0]width \nreplace: %s\n\n", res);
+        cJSON_free(res);
     }
-    cjsonp_free(res);
 
-    int ret = cjsonp_remove(json_text, "resolutions[0]width");
-    if (ret)
-    {
-        printf("path: resolutions[0]width \nremove: %s\n\n", json_text);
-    }
+    cJSON_Delete(json_root);
+
     return 0;
 }

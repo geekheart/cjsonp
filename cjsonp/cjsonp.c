@@ -1,6 +1,5 @@
 #include "cjsonp_cmd_parser.h"
 #include "cjsonp.h"
-#include "cJSON.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -11,7 +10,8 @@
 #define CJSONP_LOG()
 #endif
 
-#define json_key_LEN 128
+#define JSON_KEY_LEN 128
+
 #define CJSONP_ASSERT(x) \
     if (x)               \
     {                    \
@@ -23,7 +23,7 @@ static cJSON *_cjsonp_find(cJSON **last_obj, cjsonp_tok_t *last_jsonp_tok, unsig
 {
     cjsonp_tok_t jsonp_tok = *last_jsonp_tok;
     cJSON *json_obj_before = *last_obj;
-    char json_key[128] = {0};
+    char json_key[JSON_KEY_LEN] = {0};
     int index;
 
     // 处理parse
@@ -61,119 +61,72 @@ end:
     return NULL;
 }
 
-char *cjsonp_search(const char *json, const char *path)
+cJSON *cjsonp_search(cJSON *json_root, const char *path)
 {
-    cJSON *json_root = NULL;
-    cJSON *json_obj = NULL;
-    cjsonp_tok_t jsonp_tok;
     char res;
-    char *ret;
+    cjsonp_tok_t jsonp_tok;
+    cJSON *json_obj = NULL;
 
     // 输入断言
-    CJSONP_ASSERT(json == NULL || path == NULL);
+    CJSONP_ASSERT(json_root == NULL || path == NULL);
 
-    // 初始化命令析器
+    // 初始化命令解析器
     res = cjsonp_cmd_parser_init(&jsonp_tok, path);
     CJSONP_ASSERT(!res);
 
-    // 初始化json解析器
-    json_root = cJSON_Parse(json);
-    CJSONP_ASSERT(json_root == NULL);
     json_obj = json_root;
-
-    // 找到json子对象
     _cjsonp_find(&json_obj, &jsonp_tok, 0);
-    CJSONP_ASSERT(json_obj == NULL);
 
-    // 无格式化输出与内存回收
-    ret = cJSON_PrintUnformatted(json_obj);
-    cJSON_Delete(json_root);
-    return ret;
+    return json_obj;
 end:
-    cJSON_Delete(json_root);
     return NULL;
 }
 
-char *cjsonp_delete(const char *json, const char *path)
+int cjsonp_delete(cJSON *json_root, const char *path)
 {
-    cJSON *json_root = NULL;
     cJSON *json_parent = NULL;
     cJSON *json_obj = NULL;
     cjsonp_tok_t jsonp_tok;
     char res;
-    char *ret;
 
     // 输入断言
-    CJSONP_ASSERT(json == NULL || path == NULL);
+    CJSONP_ASSERT(json_root == NULL || path == NULL);
 
-    // 初始化命令析器
+    // 初始化命令解析器
     res = cjsonp_cmd_parser_init(&jsonp_tok, path);
     CJSONP_ASSERT(!res);
 
-    // 初始化json解析器
-    json_root = cJSON_Parse(json);
-    CJSONP_ASSERT(json_root == NULL);
-    json_obj = json_root;
-
     // 找到json子对象
+    json_obj = json_root;
     json_parent = _cjsonp_find(&json_obj, &jsonp_tok, 0);
     CJSONP_ASSERT(json_parent == NULL || json_obj == NULL);
 
     // 分离和删除子节点
-
     json_obj = cJSON_DetachItemViaPointer(json_parent, json_obj);
     cJSON_Delete(json_obj);
 
-    // 无格式化输出
-    ret = cJSON_PrintUnformatted(json_root);
-    cJSON_Delete(json_root);
-    return ret;
-
-end:
-    cJSON_Delete(json_root);
-    return NULL;
-}
-
-int cjsonp_remove(char *json, const char *path)
-{
-    char *str = cjsonp_delete(json, path);
-    if (str == NULL)
-    {
-        return 0;
-    }
-    strcpy(json, str);
-    cjsonp_free(str);
     return 1;
+end:
+    return 0;
 }
 
-char *cjsonp_add(const char *json, const char *path, const char *add)
+int cjsonp_add(cJSON *json_root, const char *path, cJSON *add_json)
 {
-    cJSON *json_root = NULL;
     cJSON *json_obj = NULL;
-    cJSON *add_json = NULL;
     cjsonp_tok_t jsonp_tok;
     char res;
-    char *ret;
+    char json_key[JSON_KEY_LEN] = {0};
     int index;
-    char json_key[128] = {0};
 
     // 输入断言
-    CJSONP_ASSERT(json == NULL || path == NULL || add == NULL);
+    CJSONP_ASSERT(json_root == NULL || path == NULL || add_json == NULL);
 
     // 初始化命令析器
     res = cjsonp_cmd_parser_init(&jsonp_tok, path);
     CJSONP_ASSERT(!res);
 
-    // 初始化json解析器
-    json_root = cJSON_Parse(json);
-    CJSONP_ASSERT(json_root == NULL);
-    json_obj = json_root;
-
-    // 初始化准备好的json字符串
-    add_json = cJSON_Parse(add);
-    CJSONP_ASSERT(add_json == NULL);
-
     // 解析
+    json_obj = json_root;
     json_obj = _cjsonp_find(&json_obj, &jsonp_tok, 1);
     CJSONP_ASSERT(json_obj == NULL);
 
@@ -190,70 +143,38 @@ char *cjsonp_add(const char *json, const char *path, const char *add)
         cJSON_InsertItemInArray(json_obj, index, add_json);
         break;
     default:
-        cJSON_Delete(add_json);
-        cJSON_Delete(json_root);
-        return NULL;
         break;
     }
 
-    // 无格式化输出
-    ret = cJSON_PrintUnformatted(json_root);
-    cJSON_Delete(json_root);
-    return ret;
-
+    return 1;
 end:
-    cJSON_Delete(add_json);
-    cJSON_Delete(json_root);
-    return NULL;
+    return 0;
 }
 
-char *cjsonp_replace(const char *json, const char *path, const char *add)
+int cjsonp_replace(cJSON *json_root, const char *path, cJSON *rep_json)
 {
-    cJSON *json_root = NULL;
     cJSON *json_obj = NULL;
     cJSON *json_parent = NULL;
-    cJSON *add_json = NULL;
     cjsonp_tok_t jsonp_tok;
     char res;
-    char *ret;
 
     // 输入断言
-    CJSONP_ASSERT(json == NULL || path == NULL || add == NULL);
+    CJSONP_ASSERT(json_root == NULL || path == NULL || rep_json == NULL);
 
     // 初始化命令析器
     res = cjsonp_cmd_parser_init(&jsonp_tok, path);
     CJSONP_ASSERT(!res);
 
-    // 初始化json解析器
-    json_root = cJSON_Parse(json);
-    CJSONP_ASSERT(json_root == NULL);
-    json_obj = json_root;
-    json_parent = json_root;
-
-    // 初始化准备好的json字符串
-    add_json = cJSON_Parse(add);
-    CJSONP_ASSERT(add_json == NULL);
-
     // 解析
+    json_obj = json_root;
     json_parent = _cjsonp_find(&json_obj, &jsonp_tok, 0);
     CJSONP_ASSERT(json_parent == NULL);
 
     // 替换json
-    add_json->string = strdup(json_obj->string);
-    res = cJSON_ReplaceItemViaPointer(json_parent, json_obj, add_json);
-    CJSONP_ASSERT(res == 0);
+    rep_json->string = strdup(json_obj->string);
+    res = cJSON_ReplaceItemViaPointer(json_parent, json_obj, rep_json);
 
-    // 无格式化输出
-    ret = cJSON_PrintUnformatted(json_root);
-    cJSON_Delete(json_root);
-    return ret;
+    return res;
 end:
-    cJSON_Delete(add_json);
-    cJSON_Delete(json_root);
-    return NULL;
-}
-
-void cjsonp_free(char *cjsonp)
-{
-    cJSON_free(cjsonp);
+    return 0;
 }
