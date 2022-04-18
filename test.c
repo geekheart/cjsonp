@@ -55,7 +55,15 @@ int main(void)
     if (ret == 1)
     {
         res = cJSON_Print(json_root);
-        printf("path: resolutions[0]width \nreplace: %s\n\n", res);
+        printf("path: resolutions[1]width \nreplace: %s\n\n", res);
+        cJSON_free(res);
+    }
+    
+    ret = cjsonp_swap(json_root, "resolutions[1]", "resolutions[2]");
+    if (ret == 1)
+    {
+        res = cJSON_Print(json_root);
+        printf("path: resolutions[0]width \nswap: %s\n\n", res);
         cJSON_free(res);
     }
 

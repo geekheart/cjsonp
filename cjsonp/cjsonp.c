@@ -61,6 +61,33 @@ end:
     return NULL;
 }
 
+static cJSON* cjsonp_detach(cJSON *json_root, const char *path)
+{
+    cJSON *json_parent = NULL;
+    cJSON *json_obj = NULL;
+    cjsonp_tok_t jsonp_tok;
+    char res;
+
+    // 输入断言
+    CJSONP_ASSERT(json_root == NULL || path == NULL);
+
+    // 初始化命令解析器
+    res = cjsonp_cmd_parser_init(&jsonp_tok, path);
+    CJSONP_ASSERT(!res);
+
+    // 找到json子对象
+    json_obj = json_root;
+    json_parent = _cjsonp_find(&json_obj, &jsonp_tok, 0);
+    CJSONP_ASSERT(json_parent == NULL || json_obj == NULL);
+
+    // 分离子节点
+    json_obj = cJSON_DetachItemViaPointer(json_parent, json_obj);
+
+    return json_obj;
+end:
+    return NULL;
+}
+
 cJSON *cjsonp_search(cJSON *json_root, const char *path)
 {
     char res;
@@ -84,26 +111,9 @@ end:
 
 int cjsonp_delete(cJSON *json_root, const char *path)
 {
-    cJSON *json_parent = NULL;
-    cJSON *json_obj = NULL;
-    cjsonp_tok_t jsonp_tok;
-    char res;
-
-    // 输入断言
-    CJSONP_ASSERT(json_root == NULL || path == NULL);
-
-    // 初始化命令解析器
-    res = cjsonp_cmd_parser_init(&jsonp_tok, path);
-    CJSONP_ASSERT(!res);
-
-    // 找到json子对象
-    json_obj = json_root;
-    json_parent = _cjsonp_find(&json_obj, &jsonp_tok, 0);
-    CJSONP_ASSERT(json_parent == NULL || json_obj == NULL);
-
-    // 分离和删除子节点
-    json_obj = cJSON_DetachItemViaPointer(json_parent, json_obj);
-    cJSON_Delete(json_obj);
+    cJSON* detach = cjsonp_detach(json_root, path);
+    CJSONP_ASSERT(detach == NULL);
+    cJSON_Delete(detach);
 
     return 1;
 end:
@@ -156,7 +166,7 @@ int cjsonp_replace(cJSON *json_root, const char *path, cJSON *rep_json)
     cJSON *json_obj = NULL;
     cJSON *json_parent = NULL;
     cjsonp_tok_t jsonp_tok;
-    char res;
+    char res = 1;
 
     // 输入断言
     CJSONP_ASSERT(json_root == NULL || path == NULL || rep_json == NULL);
@@ -171,10 +181,28 @@ int cjsonp_replace(cJSON *json_root, const char *path, cJSON *rep_json)
     CJSONP_ASSERT(json_parent == NULL);
 
     // 替换json
-    rep_json->string = strdup(json_obj->string);
+    if (rep_json->string == NULL && json_obj->string != NULL)
+    {
+        rep_json->string = strdup(json_obj->string);
+    }
     res = cJSON_ReplaceItemViaPointer(json_parent, json_obj, rep_json);
 
     return res;
 end:
     return 0;
+}
+
+
+
+int cjsonp_swap(cJSON *json_root, const char *json1_path, const char *json2_path)
+{
+    cJSON* json1 = cjsonp_search(json_root, json1_path);
+    cJSON* json2 = cjsonp_search(json_root, json2_path);
+    cJSON* _json1 = cJSON_Duplicate(json1, 1);
+    char* j = cJSON_Print(_json1);
+    printf("%s", j);
+    cJSON* _json2 = cJSON_Duplicate(json2, 1);
+    cjsonp_replace(json_root, json1_path, _json2);
+    cjsonp_replace(json_root, json2_path, _json1);
+    return 1;
 }

@@ -46,6 +46,16 @@ extern "C"
      * @return int 返回1成功，0失败
      */
     int cjsonp_replace(cJSON *json_root, const char *path, cJSON *rep_json);
+    
+    /**
+     * @brief 交换json中两个对象
+     * 
+     * @param json_root cjson根对象
+     * @param json1_path 交换对象1
+     * @param json2_path 交换对象2
+     * @return int 返回1成功，0失败
+     */
+    int cjsonp_swap(cJSON *json_root, const char *json1_path, const char *json2_path);
 
 #ifdef __cplusplus
 } /* extern "C" */
